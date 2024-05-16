@@ -1,0 +1,29 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello, world!'
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                slackNotify('Pipeline succeeded')
+            }
+        }
+        failure {
+            script {
+                slackNotify('Pipeline failed')
+            }
+        }
+    }
+}
+
+def slackNotify(message) {
+    // Use sh to run shell commands
+    sh "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"${message}\"}' https://hooks.slack.com/services/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"
+}
