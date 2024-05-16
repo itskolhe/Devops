@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+    
+    environment {
+        TF_PLUGIN_CACHE_DIR = "$HOME/.terraform.d/plugin-cache"
+        SLACK_WEBHOOK_URL = 'your_slack_webhook_url'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/itskolhe/Devops/tree/main/Project-1/Terraform'
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init -input=false'
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan -input=false'
+            }
+        }
+        
+        stage('Terraform Apply') {
+            steps {
+                script {
+                    def applyStatus = sh returnStatus: true, script: 'terraform apply -input=false tfplan'
+                    if (applyStatus == 0) {
+                        slackNotify('Terraform apply succeeded')
+                    } else {
+                        slackNotify('Terraform apply failed')
+                        error 'Terraform apply failed'
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            slackNotify('Pipeline succeeded')
+        }
+        failure {
+            slackNotify('Pipeline failed')
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
+
+def slackNotify(message) {
+    sh '''
+        curl -X POST -H 'Content-type: application/json' --data "{'text':'${message}'}" ${SLACK_WEBHOOK_URL}
+    '''
+}
